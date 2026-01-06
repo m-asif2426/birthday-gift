@@ -20,12 +20,46 @@
             background-color: var(--bg-color);
             color: var(--neon-green);
             font-family: 'Orbitron', sans-serif;
-            overflow: hidden; /* Prevent scrollbars during animation */
+            overflow: hidden;
             height: 100vh;
             width: 100vw;
             display: flex;
             justify-content: center;
             align-items: center;
+        }
+
+        /* --- Start Screen (For Audio Permission) --- */
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .start-btn {
+            background: transparent;
+            color: var(--neon-green);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            padding: 15px 40px;
+            border: 2px solid var(--neon-green);
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px var(--neon-green);
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            background: var(--neon-green);
+            color: #000;
+            box-shadow: 0 0 30px var(--neon-green);
         }
 
         /* --- Canvas Layer --- */
@@ -34,6 +68,9 @@
             top: 0;
             left: 0;
             z-index: 1;
+            display: none; /* Hidden until started */
+            width: 100%;
+            height: 100%;
         }
 
         /* --- Container for Centered Content --- */
@@ -42,12 +79,12 @@
             z-index: 10;
             text-align: center;
             width: 100%;
-            pointer-events: none; /* Let clicks pass through if needed */
+            pointer-events: none;
         }
 
-        /* --- Dynamic Text Center (Replaces Countdown) --- */
+        /* --- Dynamic Text Center --- */
         #centerText {
-            font-size: 15vw; /* Large for numbers */
+            font-size: 15vw;
             font-weight: 900;
             color: var(--neon-blue);
             text-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-blue);
@@ -57,7 +94,6 @@
             margin: 0 auto;
         }
 
-        /* Class to adjust size for words instead of numbers */
         .text-mode {
             font-size: 8vw !important;
             color: #fff !important;
@@ -69,7 +105,7 @@
 
         /* --- Final Reveal Styles --- */
         #reveal {
-            display: none; /* Hidden initially */
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -105,27 +141,39 @@
             100% { transform: translateY(0px); }
         }
 
-        /* Mobile Adjustments */
         @media (max-width: 600px) {
             #centerText { font-size: 25vw; }
             .text-mode { font-size: 12vw !important; }
             .sub-text { font-size: 6vw; }
+            .start-btn { font-size: 1.5rem; }
         }
     </style>
 </head>
 <body>
 
+    <!-- AUDIO FILE: Loop attribute hata diya hai -->
+    <audio id="bgMusic">
+        <source src="song.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Start Screen Overlay -->
+    <div id="startScreen">
+        <button class="start-btn" onclick="startExperience()">Please Click Here</button>
+        <p style="margin-top: 20px; opacity: 0.7;">Welcome and Go Next </p>
+    </div>
+
     <!-- Matrix Canvas Background -->
     <canvas id="matrixCanvas"></canvas>
 
     <div class="container">
-        <!-- Center Text for Sequence (3, 2, 1, Happy...) -->
+        <!-- Center Text for Sequence -->
         <div id="centerText"></div>
 
-        <!-- Final GIF Reveal -->
+        <!-- Final Reveal -->
         <div id="reveal">
             <h2 class="sub-text">HAPPY BIRTHDAY <span id="namePlaceholder"></span></h2>
-            <!-- Cute Cat GIF -->
+            <!-- Image Source change kar lena -->
             <img src="A.png" alt="Birthday Cat" class="bday-img">
         </div>
     </div>
@@ -133,7 +181,7 @@
     <script>
         // Configuration
         const config = {
-            name: "Aamna Khan" // CHANGE THIS TO THE BIRTHDAY PERSON'S NAME
+            name: "Any Person" 
         };
 
         document.getElementById('namePlaceholder').innerText = config.name;
@@ -143,22 +191,62 @@
         const ctx = canvas.getContext('2d');
         const centerTextEl = document.getElementById('centerText');
         const revealEl = document.getElementById('reveal');
+        const startScreen = document.getElementById('startScreen');
+        const bgMusic = document.getElementById('bgMusic');
 
-        // --- PHASE 1: MATRIX RAIN ---
-        
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // --- START FUNCTION ---
+        function startExperience() {
+            // Hide start screen
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+            }, 500);
 
-        // CHANGED: Only English Letters and Numbers
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            // --- AUDIO LOGIC (Play only 2 times) ---
+            bgMusic.volume = 0.5; // 50% volume
+            bgMusic.play().catch(e => console.log("Audio play failed:", e));
 
-        const fontSize = 16;
-        const columns = canvas.width / fontSize;
-        const rainDrops = [];
+            let playCount = 1;
+            bgMusic.onended = function() {
+                if (playCount < 2) { // 2 se kam hai to dobara chalao
+                    this.currentTime = 0;
+                    this.play();
+                    playCount++;
+                }
+            };
 
-        for( let x = 0; x < columns; x++ ) {
-            rainDrops[x] = 1;
+            // --- CANVAS FULL SCREEN FIX ---
+            canvas.style.display = 'block';
+            // Set canvas size strictly to window size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // IMPORTANT: Re-calculate columns immediately after setting size
+            initRain();
+            
+            drawMatrix();
+            
+            // Start Sequence
+            setTimeout(playSequence, 500);
         }
+
+        // --- MATRIX RAIN ---
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const fontSize = 16;
+        let columns;
+        let rainDrops = [];
+
+        // Initialize rain
+        function initRain() {
+            columns = canvas.width / fontSize;
+            rainDrops = [];
+            for( let x = 0; x < columns; x++ ) {
+                rainDrops[x] = 1;
+            }
+        }
+        
+        // Initial call (incase resize happens before start)
+        initRain();
 
         let isMatrixRunning = true;
 
@@ -183,18 +271,13 @@
             requestAnimationFrame(drawMatrix);
         };
 
-        // Handle Resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            initRain();
         });
 
-        // --- ORCHESTRATION ---
-
-        // Start Matrix immediately
-        drawMatrix();
-
-        // Sequence Data
+        // --- SEQUENCE ---
         const sequence = [
             { text: "3", type: "number", delay: 1000 },
             { text: "2", type: "number", delay: 1000 },
@@ -214,12 +297,10 @@
 
             const step = sequence[stepIndex];
             
-            // Fade out old
             centerTextEl.style.opacity = '0';
             centerTextEl.style.transform = 'scale(0.5)';
 
             setTimeout(() => {
-                // Change text and style
                 centerTextEl.innerText = step.text;
                 
                 if (step.type === "word") {
@@ -228,11 +309,9 @@
                     centerTextEl.classList.remove("text-mode");
                 }
 
-                // Fade in new
                 centerTextEl.style.opacity = '1';
                 centerTextEl.style.transform = 'scale(1.2)';
                 
-                // Normal scale settle
                 setTimeout(() => {
                     centerTextEl.style.transform = 'scale(1)';
                 }, 200);
@@ -243,17 +322,10 @@
             setTimeout(playSequence, step.delay);
         }
 
-        // Start the sequence after a slight delay to let matrix fill screen
-        setTimeout(playSequence, 500);
-
         function finishSequence() {
-            // Hide center text
             centerTextEl.style.display = 'none';
-
-            // Stop Matrix
             isMatrixRunning = false;
             
-            // Fade out canvas
             let opacity = 1;
             const fadeCanvas = setInterval(() => {
                 if (opacity > 0) {
@@ -262,7 +334,6 @@
                 } else {
                     clearInterval(fadeCanvas);
                     canvas.style.display = 'none';
-                    // Show Final GIF
                     showFinalReveal();
                 }
             }, 50);
@@ -270,7 +341,6 @@
 
         function showFinalReveal() {
             revealEl.style.display = 'flex';
-            // Allow display:flex to apply before changing opacity
             requestAnimationFrame(() => {
                 revealEl.style.opacity = '1'; 
             });
